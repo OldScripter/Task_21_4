@@ -3,18 +3,20 @@
 #include <cstdlib>
 #include <fstream>
 
-const int MAP_WIDTH = 2;
-const int MAP_HEIGHT = 2;
-const int ENEMIES_QUANTITY = 2;
-const int PLAYER_START_X = 0;
-const int PLAYER_START_Y = 0;
+const int MAP_WIDTH = 40;
+const int MAP_HEIGHT = 40;
+const int ENEMIES_QUANTITY = 5;
 const int ENEMY_HEALTH_MIN = 50;
 const int ENEMY_HEALTH_MAX = 150;
 const int ENEMY_ARMOR_MIN = 0;
 const int ENEMY_ARMOR_MAX = 50;
 const int ENEMY_DAMAGE_MIN = 15;
 const int ENEMY_DAMAGE_MAX = 30;
+const std::string SAVE_FILE_DIR = "..\\save.bin";
 
+/**
+ * @enum Movement direction for game characters.
+ */
 enum Direction
 {
     UP,
@@ -23,6 +25,9 @@ enum Direction
     RIGHT
 };
 
+/**
+ * @struct Character with ability to move and attack.
+ */
 struct Character
 {
     int x;
@@ -36,9 +41,9 @@ struct Character
 
     /**
      * @struct Character with ability to move and attack.
-     * @param[in] x coordinate.
-     * @param[in] y coordinate.
-     * @param[in] isPlayer flag for player controlled character.
+     * @param [in] x coordinate.
+     * @param [in] y coordinate.
+     * @param [in] isPlayer flag for player controlled character.
      */
     Character(int x, int y, bool isPlayer)
     {
@@ -49,38 +54,51 @@ struct Character
 
  /**
   * @method Move character or attack / stay on place if new place is busy.
-  * @param moveRandomly[in] if true the movement direction is random (independent from dir argument).
-  * @param characters List of all game characters in game.
-  * @param dir Direction for movement. Default value is UP.
+  * @param [in] moveRandomly[in] if true the movement direction is random (independent from dir argument).
+  * @param [in, out] characters List of all game characters in game.
+  * @param [in] dir Direction for movement. Default value is UP.
   */
     void move(bool moveRandomly, std::vector<Character>& characters, Direction dir = UP)
     {
         checkIfDead();
-        if (isDead) return;
+        if (isDead)
+        {
+            return;
+        }
 
         int newX = x;
         int newY = y;
 
         if (moveRandomly)
+        {
             dir = (Direction)(rand() % 5);
+        }
 
         switch(dir)
         {
             case UP:
                 --newY;
                 break;
+
             case DOWN:
                 ++newY;
                 break;
+
             case RIGHT:
                 ++newX;
                 break;
+
             case LEFT:
                 --newX;
                 break;
         }
+        //Check map borders reaching:
         if (newX < 0 || newX > MAP_WIDTH - 1 || newY < 0 || newY > MAP_HEIGHT - 1)
+        {
             return;
+        }
+
+        //Check if cell is free. If true - move, if false - attack / stop:
         if (cellIsFree(newX, newY, characters))
         {
             x = newX;
@@ -91,7 +109,7 @@ struct Character
 
     /**
      * @method Attack the target character.
-     * @param[in] target Character to be damaged.
+     * @param [in] target Character to be damaged.
      */
     void attack(Character& target)
     {
@@ -105,7 +123,11 @@ struct Character
         std::cout << "\t" << target.name << ": armor is " << target.armor << "\n";
         std::cout << "\t" << target.name << ": health is " << target.health << "\n";
         target.checkIfDead();
-        if (target.isDead) std::cout << "\t" << target.name << " is dead. Rest in piece.\n";
+        //Check if dead:
+        if (target.isDead)
+        {
+            std::cout << "\t" << target.name << " is dead. Rest in piece.\n";
+        }
     }
 
     /**
@@ -119,14 +141,13 @@ struct Character
         }
     }
 
-    /**
-     * @Method
-     * Check if coords are free. If not - attack (enemy) or stay on place (friend).
-     * @param[in] xCoord coordinate to be checked.
-     * @param[in] yCoord coordinate to be checked.
-     * @param[in][out] characters vector of all game characters.
-     * @return true if cell if free or false if cell is busy.
-     */
+   /**
+    * @method Check if coords are free. If not - attack (enemy) or stay on place (friend)
+    * @param [in] xCoord coordinate to be checked
+    * @param [in] yCoord coordinate to be checked.
+    * @param [in, out] characters vector of all game characters.
+    * @return true if cell if free or false if cell is busy.
+    */
     bool cellIsFree(int xCoord, int yCoord, std::vector<Character>& characters)
     {
         for (Character& c : characters)
@@ -146,7 +167,7 @@ struct Character
 
 /**
  * @function Prints the map array in console.
- * @param[in] map array[int][int] whose values are printed.
+ * @param [in] map array[int][int] whose values are printed.
  */
 void printMap(char (&map)[MAP_HEIGHT][MAP_WIDTH])
 {
@@ -162,8 +183,8 @@ void printMap(char (&map)[MAP_HEIGHT][MAP_WIDTH])
 
 /**
  * @function Puts all characters on map.
- * @param[out] map Array to be placed on.
- * @param[in] characters Vector with all game characters.
+ * @param [out] map Array to be placed on.
+ * @param [in] characters Vector with all game characters.
  */
 void putCharactersOnMap(char (&map)[MAP_HEIGHT][MAP_WIDTH], std::vector<Character>& characters)
 {
@@ -176,7 +197,7 @@ void putCharactersOnMap(char (&map)[MAP_HEIGHT][MAP_WIDTH], std::vector<Characte
 
 /**
  * @function Set all map array value to ' . '.
- * @param[in] map array[int][int] whose values are reset.
+ * @param [in] map array[int][int] whose values are reset.
  */
 void resetMap(char (&map)[MAP_HEIGHT][MAP_WIDTH])
 {
@@ -191,12 +212,13 @@ void resetMap(char (&map)[MAP_HEIGHT][MAP_WIDTH])
 
 /**
  * @function Generate random x and y.
- * @param[out] x Random coord
- * @param[out] y Random coord
- * @param[in] characters Vector of all game characters.
+ * @param [out] x Random coord
+ * @param [out] y Random coord
+ * @param [in] characters Vector of all game characters.
  */
 void generateRandomCoords(int& x, int& y, std::vector<Character> characters)
 {
+    // check for debug (just to stay on a safe side and to prevent developer from wrong global variables values):
     if ((MAP_WIDTH * MAP_HEIGHT - 1) < ENEMIES_QUANTITY)
     {
         std::cerr << "Number of enemies is bigger than free cells on map.\n";
@@ -226,7 +248,7 @@ void generateRandomCoords(int& x, int& y, std::vector<Character> characters)
 
 /**
  * @function Get integer from std::cin stream.
- * @param[in] label std::string to be printed before std::cin stream opening.
+ * @param [in] label std::string to be printed before std::cin stream opening.
  * @returns value after std::stoi() conversion of std::cin stream.
  * @throws exception std::invalid_argument Thrown if no std::cin conversion could be performed.
  */
@@ -251,49 +273,148 @@ int getIntFromCin(std::string label)
 
 /**
  * @function Get std::string from std::cin stream.
- * @param[in] label std::string to be printed before std::cin stream opening.
+ * @param [in] label std::string to be printed before std::cin stream opening.
  * @returns value after reading of std::cin stream.
  */
 std::string getStringFromCin(std::string label)
 {
-    std::cout << label << ":\n";
     std::string buffer;
-    std::getline(std::cin, buffer);
+    do
+    {
+        buffer = "";
+        std::cout << label << ":\n";
+        std::getline(std::cin, buffer);
 
-    std::string value = buffer;
-    return value;
+        if (buffer.length() == 0)
+            std::cerr <<"Please enter any name.\n";
+
+    }
+    while (buffer.length() == 0);
+
+    return buffer;
 }
 
+/**
+ * @function Print the vector of characters. Use for debug.
+ * @param characters Vector of all game characters.
+ */
+void printVector(std::vector<Character>& characters)
+{
+    for (const Character& c: characters)
+    {
+        std::cout << "-----------------------\n";
+        std::cout << "name" << c.name << "\n";
+        std::cout << "health" << c.health << "\n";
+        std::cout << "armor" << c.armor << "\n";
+        std::cout << "damage" << c.damage << "\n";
+        std::cout << "x" << c.x << "\n";
+        std::cout << "y" << c.y << "\n";
+        std::cout << "isPlayer" << c.isPlayer << "\n";
+        std::cout << "isDead" << c.isDead << "\n";
+        std::cout << "-----------------------\n";
+    }
+}
+
+
+/**
+ * @function Load game progress.
+ * @param [out] characters Vector of all game characters.
+ */
 void load(std::vector<Character>& characters)
 {
+    characters.clear();
+    std::ifstream loadStream(SAVE_FILE_DIR, std::ios::binary);
+    if (loadStream.is_open())
+    {
+        while(!loadStream.eof())
+        {
+            int nameLength = 0;
+            loadStream.read((char*)&nameLength, sizeof(nameLength));
+            if (nameLength == 0) break;
 
+            Character* c = new Character(0, 0, false);
+            c->name.resize(nameLength);
+            loadStream.read((char*)c->name.c_str(), nameLength);
+            loadStream.read((char*)&c->health, sizeof(c->health));
+            loadStream.read((char*)&c->armor, sizeof(c->armor));
+            loadStream.read((char*)&c->damage, sizeof(c->damage));
+            loadStream.read((char*)&c->x, sizeof(c->x));
+            loadStream.read((char*)&c->y, sizeof(c->y));
+            loadStream.read((char*)&c->isDead, sizeof(c->isDead));
+            loadStream.read((char*)&c->isPlayer, sizeof(c->isPlayer));
+
+            characters.push_back(*c);
+            delete c;
+            c = 0;
+        }
+        loadStream.close();
+    }
+    else
+    {
+        std::cerr << "Load game error. Check availability of save file.\n";
+    }
+}
+
+/**
+ * @function Save game progress.
+ * @param [in] characters Vector of all game characters.
+ */
+void save(std::vector<Character>& characters)
+{
+    std::ofstream saveStream(SAVE_FILE_DIR, std::ios::binary);
+    if (saveStream.is_open())
+    {
+        for (Character& c : characters)
+        {
+            int length = c.name.length();
+            saveStream.write((char*)&length, sizeof(length));
+            saveStream.write(c.name.c_str(), c.name.length());
+            saveStream.write((char*)&c.health, sizeof(c.health));
+            saveStream.write((char*)&c.armor, sizeof(c.armor));
+            saveStream.write((char*)&c.damage, sizeof(c.damage));
+            saveStream.write((char*)&c.x, sizeof(c.x));
+            saveStream.write((char*)&c.y, sizeof(c.y));
+            saveStream.write((char*)&c.isDead, sizeof(c.isDead));
+            saveStream.write((char*)&c.isPlayer, sizeof(c.isPlayer));
+        }
+        saveStream.close();
+    }
+    else
+    {
+        std::cerr << "Save game error. Check availability of save file.\n";
+    }
 }
 
 int main()
 {
     std::srand(time(nullptr));
-    //1 Initialize map and game characters vector:
-    std::cout << "--- Initializing ---\n";
+    std::cout << "---=== Welcome to simple RPG! ===---\n";
+
+    //Initialize map and game characters vector:
+    std::cout << "--- Preparing map...\n";
     char map[MAP_HEIGHT][MAP_WIDTH];
     resetMap(map);
     std::vector<Character> gameCharacters;
 
-    //2. Create player
-    std::cout << "--- Create your character ---\n";
-    Character* player = new Character(PLAYER_START_X, PLAYER_START_Y, true);
+    //Create player
+    std::cout << "--- Create your character:\n";
+    int x = 0;
+    int y = 0;
+    generateRandomCoords(x, y, gameCharacters);
+    Character* player = new Character(x, y, true);
     player->name = getStringFromCin("Please enter your name");
     player->health = getIntFromCin("Please enter your health");
     player->armor = getIntFromCin("Please enter your armor");
     player->damage = getIntFromCin("Please enter your damage");
     gameCharacters.push_back(*player);
     delete player;
+    player = 0;
 
-    //3. Create gameCharacters
-    std::cout << "--- Creating other game characters ---\n";
+    //Create gameCharacters
+    std::cout << "--- Creating angry enemies...\n";
 
     for (int i = 1; i <= ENEMIES_QUANTITY; ++i)
     {
-
         int x = 0;
         int y = 0;
         generateRandomCoords(x, y, gameCharacters);
@@ -307,16 +428,16 @@ int main()
         enemy = 0;
     }
 
-    //5. Start loop
-    std::cout << "--- Starting game ---\n";
+    //Start loop
+    std::cout << "--- Start! Kill all enemies.\n";
     while (true)
     {
+        //Print the current state:
         resetMap(map);
         putCharactersOnMap(map, gameCharacters);
         printMap(map);
 
-        //5.1 Ask for action
-        int next_x, next_y;
+        //Ask for action:
         std::string command = getStringFromCin("Please enter the command\n(up / down / left / right / exit");
         Direction dir;
         if (command == "exit")  break;
@@ -338,11 +459,17 @@ int main()
         }
         else if (command == "save")
         {
-            //save(gameCharacters);
+            std::cout << "--- Saving...\n";
+            save(gameCharacters);
+            std::cout << "--- Saved!\n";
+            continue;
         }
         else if (command == "load")
         {
+            std::cout << "--- Loading...\n";
             load(gameCharacters);
+            std::cout << "--- Loaded!\n";
+            continue;
         }
         else
         {
@@ -357,19 +484,22 @@ int main()
         }
 
         //Check if victory:
-        int deadEnemiesCount = 0;
         bool playerIsDead = false;
+        int deadEnemiesCount = 0;
+
         for (Character& c : gameCharacters)
         {
-            if (!c.isPlayer) {
-                if (c.isDead) ++deadEnemiesCount;
-            }
-            else
+            if (!c.isPlayer && (c.isDead || c.health <= 0))
             {
-                if (c.isDead) playerIsDead = true;
+                ++deadEnemiesCount;
+            }
+            else if (c.isDead || c.health <= 0)
+            {
+                playerIsDead = true;
                 break;
             }
         }
+
         if (playerIsDead || deadEnemiesCount == ENEMIES_QUANTITY)
         {
             if (playerIsDead) std::cout << "DEFEAT...\n";
@@ -377,6 +507,6 @@ int main()
             break;
         }
     }
-
+    std::cout << "Game is finished. See you!\n";
     return 0;
 }
